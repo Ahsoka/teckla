@@ -9,7 +9,7 @@ import discord
 load_dotenv()
 
 bot = Bot(command_prefix='test.', intents=discord.Intents(messages=True, guilds=True))
-slash = SlashCommand(bot, sync_commands=True)
+slash = SlashCommand(bot)
 
 @slash.slash(
     name='upload',
