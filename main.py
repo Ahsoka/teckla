@@ -17,7 +17,7 @@ slash = SlashCommand(bot, sync_commands=True)
     options=[
         create_option(
             'messages',
-            "Selects the number of messages to be uploaded, if there is no input all message will be retrieved.",
+            "Selects the number of messages to be uploaded, if there is no input all messages will be retrieved.",
             int,
             required=False
         ),
