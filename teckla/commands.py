@@ -28,7 +28,7 @@ class CommandsCog(Cog):
             )
         ]
     )
-    async def upload(ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
+    async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
         if channel is None:
             channel = ctx.channel
         await ctx.defer()
