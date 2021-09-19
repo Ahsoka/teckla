@@ -12,5 +12,6 @@ async def start_server():
 @routes.get('/')
 async def get_creds(request: aiohttp.web.Request):
     print(f"{request=}")
+    return aiohttp.web.Response(text="Hello world! 😉")
 
 app.add_routes(routes)
