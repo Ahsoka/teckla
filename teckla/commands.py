@@ -22,6 +22,24 @@ class CommandsCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
+    async def is_authenticated(self, ctx: SlashContext):
+        async with AsyncSession(engine) as sess:
+            token: Token = await sess.get(Token, ctx.author.id)
+        if token and token.expiry < datetime.today():
+            await ctx.send(
+                'Your token is no longer valid, please use `/authenticate` to refresh your token.'
+            )
+        elif token:
+            return token
+        else:
+            await ctx.send(
+                (
+                    "Before you can use this command you must first use the "
+                    "`/authenticate` command to register your Google account."
+                )
+            )
+        return False
+
     @cog_slash(
         name='authenticate',
         description='Register your Google account so you can use the other commands.'
