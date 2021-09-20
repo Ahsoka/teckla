@@ -3,12 +3,13 @@ from discord_slash.cog_ext import cog_slash
 from discord.ext.commands import Cog, Bot
 from discord_slash import SlashContext
 from . import aio_google, client_creds
-from typing import Dict
+from typing import Dict, Tuple
 
+import asyncio
 import discord
 import secrets
 
-states: Dict[str, int] = {}
+states: Dict[str, Tuple[int, asyncio.Event]]  = {}
 
 
 class CommandsCog(Cog):
@@ -22,7 +23,7 @@ class CommandsCog(Cog):
     async def authenticate(self, ctx: SlashContext):
         if aio_google.oauth2.is_ready(client_creds):
             state = secrets.token_urlsafe()
-            states[state] = ctx.author.id
+            states[state] = (ctx.author.id, asyncio.Event())
             auth_url = aio_google.oauth2.authorization_url(access_type='offline', state=state)
 
             # This is a workaround for https://github.com/omarryhan/aiogoogle/issues/72
@@ -30,6 +31,15 @@ class CommandsCog(Cog):
                 auth_url = auth_url[:loc] + auth_url[loc + len('&include_granted_scopes=null'):]
 
             await ctx.send(f'Please authenticate yourself at this URL: {auth_url}.', hidden=True)
+
+            await states[state][1].wait()
+
+            await ctx.send((
+                    f'{ctx.author.mention}, '
+                    'you have successfully authenticated yourself! 🥳'
+                ),
+                hidden=True
+            )
         else:
             await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
             # TODO: Send message to @Ahsoka to fix it.
