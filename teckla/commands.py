@@ -79,6 +79,10 @@ class CommandsCog(Cog):
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
         if token:
+            if token.expiry < datetime.today():
+                await ctx.send('Your token is no longer valid, please use `/authenticate` to refresh your token.')
+                return
+
             await ctx.defer()
             user_creds = UserCreds(
                 access_token=token.token,
