@@ -1,4 +1,5 @@
 aiohttp
+aiogoogle
 discord.py
 discord-py-slash-command
 python-dotenv
