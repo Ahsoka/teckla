@@ -93,15 +93,7 @@ class CommandsCog(Cog):
         ]
     )
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
-        if channel is None:
-            channel = ctx.channel
-        async with AsyncSession(engine) as sess:
-            token: Token = await sess.get(Token, ctx.author.id)
-        if token:
-            if token.expiry < datetime.today():
-                await ctx.send('Your token is no longer valid, please use `/authenticate` to refresh your token.')
-                return
-
+        if token := await self.is_authenticated(ctx):
             await ctx.defer()
             user_creds = UserCreds(
                 access_token=token.token,
@@ -164,10 +156,3 @@ class CommandsCog(Cog):
                 ))
 
             await ctx.send(f"Successfully uploaded to **{document.content['title']}**.")
-        else:
-            await ctx.send(
-                (
-                    "Before you can use this command you must first use the "
-                    "`/authenticate` command to register your Google account."
-                )
-            )
