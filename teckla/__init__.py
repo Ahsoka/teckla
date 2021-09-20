@@ -13,7 +13,7 @@ slash = SlashCommand(bot)
 
 with open('credentials.json') as file:
     client_creds = json.load(file)['web']
-    client_creds['scopes'] = ['https://www.googleapis.com/auth/drive']
+    client_creds['scopes'] = ['https://www.googleapis.com/auth/documents']
     client_creds['redirect_uri'] = client_creds['redirect_uris'][0]
     aio_google = Aiogoogle(client_creds=client_creds)
 
