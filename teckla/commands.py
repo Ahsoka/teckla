@@ -74,22 +74,69 @@ class CommandsCog(Cog):
         ]
     )
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
+        if channel is None:
+            channel = ctx.channel
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
         if token:
+            await ctx.defer()
             user_creds = UserCreds(
                 access_token=token.token,
                 refresh_token=token.refresh_token,
                 expires_at=token.expiry.isoformat()
             )
 
+            updates = []
+            current_loc = 1
+            async for message in channel.history(limit=messages):
+                header_text = f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n"
+                header = {
+                    'insertText': {
+                        'text': header_text, 'location': {'index': current_loc}
+                    }
+                }
+                header_format = {
+                    'updateTextStyle': {
+                        'textStyle': {
+                            'bold': True,
+                        },
+                        'fields': 'bold',
+                        'range': {
+                            'startIndex': current_loc,
+                            'endIndex': current_loc + len(header_text)
+                        }
+                    }
+                }
+                updates.append(header)
+                updates.append(header_format)
+
+                current_loc += len(header_text)
+
+                body_text = f"{message.content}\n\n"
+                print(repr(body_text))
+                body = {
+                    'insertText': {
+                        'text': body_text, 'location': {'index': current_loc}
+                    }
+                }
+                updates.append(body)
+
+                current_loc += len(body_text)
+
             async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
+
                 document = await google.as_user(
                     docs_v1.documents.create(data={'title': 'Testing :D'}),
                     full_res=True
                 )
-            await ctx.send('This interaction did NOT fail 😜')
+
+                await google.as_user(docs_v1.documents.batchUpdate(
+                    documentId=document.content['documentId'],
+                    json={'requests': updates}
+                ))
+
+            await ctx.send(f"Successfully uploaded to **{document.content['title']}**.")
         else:
             await ctx.send(
                 (
@@ -97,12 +144,3 @@ class CommandsCog(Cog):
                     "`/authenticate` command to register your Google account."
                 )
             )
-
-        # NOTE: For reference
-        # if channel is None:
-        #     channel = ctx.channel
-        # await ctx.defer()
-        # with open('messages.txt', 'w', encoding='UTF-8') as file:
-        #     async for message in channel.history(limit=messages):
-        #         file.write(f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n{message.content}\n\n")
-        # await ctx.send('Uploaded content!')
