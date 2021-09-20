@@ -29,7 +29,7 @@ class CommandsCog(Cog):
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
 
-        if token and token.expiry < datetime.today():
+        if token and token.expiry > datetime.today():
             await ctx.send('You are already authenticated!', hidden=True)
         else:
             if aio_google.oauth2.is_ready(client_creds):
