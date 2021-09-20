@@ -2,8 +2,10 @@ from discord_slash.utils.manage_commands import create_option
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
 from discord_slash.cog_ext import cog_slash
+from aiogoogle.auth.creds import UserCreds
 from discord.ext.commands import Cog, Bot
 from discord_slash import SlashContext
+from aiogoogle import Aiogoogle
 from typing import Dict, Tuple
 from datetime import datetime
 from .tables import Token
@@ -72,10 +74,35 @@ class CommandsCog(Cog):
         ]
     )
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
-        if channel is None:
-            channel = ctx.channel
-        await ctx.defer()
-        with open('messages.txt', 'w', encoding='UTF-8') as file:
-            async for message in channel.history(limit=messages):
-                file.write(f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n{message.content}\n\n")
-        await ctx.send('Uploaded content!')
+        async with AsyncSession(engine) as sess:
+            token: Token = await sess.get(Token, ctx.author.id)
+        if token:
+            user_creds = UserCreds(
+                access_token=token.token,
+                refresh_token=token.refresh_token,
+                expires_at=token.expiry.isoformat()
+            )
+
+            async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
+                docs_v1 = await google.discover('docs', 'v1')
+                document = await google.as_user(
+                    docs_v1.documents.create(data={'title': 'Testing :D'}),
+                    full_res=True
+                )
+            await ctx.send('This interaction did NOT fail 😜')
+        else:
+            await ctx.send(
+                (
+                    "Before you can use this command you must first use the "
+                    "`authenticate` command to register your Google account."
+                )
+            )
+
+        # NOTE: For reference
+        # if channel is None:
+        #     channel = ctx.channel
+        # await ctx.defer()
+        # with open('messages.txt', 'w', encoding='UTF-8') as file:
+        #     async for message in channel.history(limit=messages):
+        #         file.write(f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n{message.content}\n\n")
+        # await ctx.send('Uploaded content!')
