@@ -3,3 +3,4 @@ aiogoogle
 discord.py
 discord-py-slash-command
 python-dotenv
+sqlalchemy>=1.4.3
