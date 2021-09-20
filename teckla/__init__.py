@@ -1,9 +1,12 @@
+from sqlalchemy.ext.asyncio import create_async_engine
 from discord_slash import SlashCommand
 from discord.ext.commands import Bot
 from aiogoogle import Aiogoogle
 
 import json
 import discord
+
+engine = create_async_engine('sqlite+aiosqlite:///:memory:')
 
 bot = Bot(command_prefix='/', intents=discord.Intents(messages=True, guilds=True))
 slash = SlashCommand(bot)
