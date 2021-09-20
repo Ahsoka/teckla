@@ -94,7 +94,7 @@ class CommandsCog(Cog):
             await ctx.send(
                 (
                     "Before you can use this command you must first use the "
-                    "`authenticate` command to register your Google account."
+                    "`/authenticate` command to register your Google account."
                 )
             )
 
