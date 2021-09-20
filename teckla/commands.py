@@ -94,6 +94,8 @@ class CommandsCog(Cog):
     )
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
         if token := await self.is_authenticated(ctx):
+            if channel is None:
+                channel = ctx.channel
             await ctx.defer()
             user_creds = UserCreds(
                 access_token=token.token,
