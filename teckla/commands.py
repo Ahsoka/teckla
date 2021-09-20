@@ -117,7 +117,6 @@ class CommandsCog(Cog):
                 current_loc += len(header_text)
 
                 body_text = f"{message.content}\n\n"
-                print(repr(body_text))
                 body = {
                     'insertText': {
                         'text': body_text, 'location': {'index': current_loc}
