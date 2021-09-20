@@ -13,6 +13,7 @@ from .tables import Token
 import asyncio
 import discord
 import secrets
+import emoji
 
 states: Dict[str, Tuple[int, asyncio.Event]]  = {}
 
@@ -117,6 +118,11 @@ class CommandsCog(Cog):
                 current_loc += len(header_text)
 
                 body_text = f"{message.content}\n\n"
+                # NOTE: Weird bug with Google Docs where the first \n is not registered
+                # if the last character preceeding the \n is an emoji character
+                # Example: '😜\n\n' will only have one enter and not the expected two
+                if message.content and emoji.get_emoji_regexp().match(message.content[-1]):
+                    body_text += '\n'
                 body = {
                     'insertText': {
                         'text': body_text, 'location': {'index': current_loc}
