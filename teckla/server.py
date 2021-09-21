@@ -31,6 +31,7 @@ async def get_creds(request: aiohttp.web.Request):
                 token.token = access_token
                 token.expiry = expiry
                 token.scopes = scopes
+                token.valid = True
             else:
                 sess.add(Token(id=discord_id, token=access_token, expiry=expiry, scopes=scopes))
         states[state][1].set()
