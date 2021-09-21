@@ -40,6 +40,8 @@ async def get_creds(request: aiohttp.web.Request):
         states[state][1].set()
         del states[state]
 
-    return aiohttp.web.Response(text="Hello world! 😉")
+        return aiohttp.web.Response(text='Congratulations, you have successfully authenticated! You may close this window.')
+    else:
+        return aiohttp.web.Response(body="Authentication failed, please using the /authenticate register command again.")
 
 app.add_routes(routes)
