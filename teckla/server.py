@@ -22,6 +22,7 @@ async def get_creds(request: aiohttp.web.Request):
         async with AsyncSession(engine) as sess, sess.begin():
             discord_id = states[state][0]
             access_token = full_user_creds['access_token']
+            refresh_token = full_user_creds['refresh_token']
             expiry = dateutil.parser.isoparse(full_user_creds['expires_at'])
             scopes = list(map(lambda scope: Scope(discord_id, scope), full_user_creds['scopes']))
 
@@ -29,11 +30,13 @@ async def get_creds(request: aiohttp.web.Request):
 
             if token:
                 token.token = access_token
+                if token.refresh_token is None or refresh_token is not None:
+                    token.refresh_token = refresh_token
                 token.expiry = expiry
                 token.scopes = scopes
                 token.valid = True
             else:
-                sess.add(Token(id=discord_id, token=access_token, expiry=expiry, scopes=scopes))
+                sess.add(Token(id=discord_id, token=access_token, expiry=expiry, scopes=scopes, refresh_token=refresh_token))
         states[state][1].set()
         del states[state]
 
