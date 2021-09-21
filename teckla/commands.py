@@ -1,10 +1,10 @@
 from discord_slash.utils.manage_commands import create_option
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
-from discord_slash.cog_ext import cog_slash
 from discord.ext.commands import Cog, Bot
 from typing import Dict, Tuple, Iterable
 from discord_slash import SlashContext
+from discord_slash import cog_ext
 from aiogoogle import Aiogoogle
 from datetime import datetime
 from .tables import Token
@@ -39,7 +39,7 @@ class CommandsCog(Cog):
             )
         return False
 
-    @cog_slash(
+    @cog_ext.cog_slash(
         name='authenticate',
         description='Register your Google account so you can use the other commands.'
     )
@@ -117,7 +117,7 @@ class CommandsCog(Cog):
 
         return updates
 
-    @cog_slash(
+    @cog_ext.cog_slash(
         name='upload',
         description="Upload the messages in the selected channel to a Google Doc.",
         options=[
