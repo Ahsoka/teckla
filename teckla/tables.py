@@ -57,12 +57,7 @@ class Token:
 
     documents: List['Document'] = field(
         default_factory=list, metadata={
-            'sa': relationship(
-                'Document',
-                lazy='selectin',
-                cascade='all, delete-orphan',
-                backref=backref('token', lazy='selectin')
-            )
+            'sa': relationship('Document', lazy='selectin', cascade='all, delete-orphan', back_populates='token')
         }
     )
 
@@ -89,4 +84,10 @@ class Document:
     last_message_date: datetime.datetime = field(metadata={'sa': Column(DateTime(timezone=True))})
     discord_id: int = field(
         metadata={'sa': Column(BigInteger, ForeignKey(Token.id, ondelete='CASCADE', onupdate='CASCADE'))}
+    )
+    readable: bool = field(default=True, metadata={'sa': Column(Boolean, nullable=False)})
+
+    token: List[Token] = field(
+        default_factory=list,
+        metadata={'sa': relationship(Token, lazy='selectin', back_populates='documents')}
     )
