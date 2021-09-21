@@ -54,6 +54,17 @@ class Token:
         }
     )
 
+    documents: List['Document'] = field(
+        default_factory=list, metadata={
+            'sa': relationship(
+                'Document',
+                lazy='selectin',
+                cascade='all, delete-orphan',
+                backref=backref('token', lazy='selectin')
+            )
+        }
+    )
+
     def user_creds(self):
         return UserCreds(
             access_token=self.token,
