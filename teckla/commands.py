@@ -121,7 +121,20 @@ class CommandsCog(Cog):
                     'text': body_text, 'location': {'index': current_loc}
                 }
             }
+            body_format = {
+                'updateTextStyle': {
+                    'textStyle': {
+                        'bold': False,
+                    },
+                    'fields': 'bold',
+                    'range': {
+                        'startIndex': current_loc,
+                        'endIndex': current_loc + len(body_text)
+                    }
+                }
+            }
             updates.append(body)
+            updates.append(body_format)
 
             current_loc += len(body_text)
 
