@@ -42,13 +42,14 @@ class CommandsCog(Cog):
     @cog_ext.cog_subcommand(
         base='authenticate',
         name='register',
-        description='Register your Google account so you can use the other commands.'
+        description='Register your Google account so you can use the other commands.',
+        options=[]
     )
-    async def authenticate(self, ctx: SlashContext):
+    async def authenticate(self, ctx: SlashContext, force: bool = False):
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
 
-        if token and token.expiry > datetime.today() and token.valid:
+        if token and token.expiry > datetime.today() and token.valid and not force:
             await ctx.send('You are already authenticated!', hidden=True)
         else:
             if aio_google.oauth2.is_ready(client_creds):
@@ -73,6 +74,14 @@ class CommandsCog(Cog):
             else:
                 await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
                 # TODO: Send message to @Ahsoka to fix it.
+
+    @cog_ext.cog_subcommand(
+        base='authenticate',
+        name='force',
+        description="Use this to refresh your access token even if you already have one in the database."
+    )
+    async def auth_force(self, ctx: SlashContext):
+        await self.authenticate.invoke(ctx, force=True)
 
     def messages_to_doc_json(self, messages: Iterable[discord.Message]):
         updates = []
