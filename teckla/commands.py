@@ -1,4 +1,4 @@
-from discord_slash.utils.manage_commands import create_option
+from discord_slash.utils.manage_commands import create_option, create_permission
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
 from discord.ext.commands import Cog, Bot
@@ -20,6 +20,15 @@ import secrets
 import emoji
 
 states: Dict[str, Tuple[int, asyncio.Event]]  = {}
+
+ladyalpha_perm_decorator = cog_ext.permission(
+    809089261100859402,
+    [
+        create_permission(809185433241387051, 1, True),
+        create_permission(809196070587334657, 1, False),
+        create_permission(832351220840136745, 1, False),
+    ]
+)
 
 
 class CommandsCog(Cog):
@@ -58,6 +67,7 @@ class CommandsCog(Cog):
         description='Register your Google account so you can use the other commands.',
         options=[]
     )
+    @ladyalpha_perm_decorator
     async def authenticate(self, ctx: SlashContext, force: bool = False):
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
@@ -93,6 +103,7 @@ class CommandsCog(Cog):
         name='force',
         description="Use this to refresh your access token even if you already have one in the database."
     )
+    @ladyalpha_perm_decorator
     async def auth_force(self, ctx: SlashContext):
         await self.authenticate.invoke(ctx, force=True)
 
@@ -171,6 +182,7 @@ class CommandsCog(Cog):
             )
         ]
     )
+    @ladyalpha_perm_decorator
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
         if channel is None:
             channel = ctx.channel
@@ -215,6 +227,7 @@ class CommandsCog(Cog):
             )
         ]
     )
+    @ladyalpha_perm_decorator
     async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
         if channel is None:
             channel = ctx.channel
