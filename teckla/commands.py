@@ -2,13 +2,18 @@ from discord_slash.utils.manage_commands import create_option
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
 from discord.ext.commands import Cog, Bot
-from typing import Dict, Tuple, Iterable
+from typing import Dict, Iterable, Tuple
+from aiogoogle.resource import GoogleAPI
 from discord_slash import SlashContext
+from .tables import Token, Document
+from discord.ext.tasks import loop
 from discord_slash import cog_ext
 from aiogoogle import Aiogoogle
 from datetime import datetime
-from .tables import Token
+from sqlalchemy import select
 
+import contextlib
+import aiogoogle
 import asyncio
 import discord
 import secrets
@@ -20,6 +25,14 @@ states: Dict[str, Tuple[int, asyncio.Event]]  = {}
 class CommandsCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+
+    @Cog.listener()
+    async def on_ready(self):
+        if not self.stream_loop.is_running():
+            # NOTE: Prevent loop from starting if tables
+            # aren't created yet.
+            await self.bot.tables_created.wait()
+            self.stream_loop.start()
 
     async def is_authenticated(self, ctx: SlashContext):
         async with AsyncSession(engine) as sess:
@@ -181,3 +194,114 @@ class CommandsCog(Cog):
                 ))
 
             await ctx.send(f"Successfully uploaded to **{document.content['title']}**.")
+
+    @cog_ext.cog_slash(
+        name='stream',
+        description='Upload the messages in the selected channel to a Google Doc everyday.',
+        options=[
+            create_option(
+                'channel',
+                "Select the channel to upload messages from, if there is no input the current channel is selected.",
+                7,
+                required=False
+            ),
+            create_option(
+                'name',
+                "Name for the new document.",
+                str,
+                required=False
+            )
+        ]
+    )
+    async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
+        if token := await self.is_authenticated(ctx):
+            await ctx.defer()
+            if channel is None:
+                channel = ctx.channel
+            async with Aiogoogle(user_creds=token.user_creds(), client_creds=client_creds) as google:
+                docs_v1 = await google.discover('docs', 'v1')
+                kwarg = {'data': {'title': name}} if name else {}
+                document = await google.as_user(docs_v1.documents.create(**kwarg), full_res=True)
+                async with AsyncSession(engine) as sess, sess.begin():
+                    message: discord.Message = await channel.fetch_message(channel.last_message_id)
+                    sess.add(Document(
+                        doc_id=document.content['documentId'],
+                        channel_id=channel.id,
+                        last_message=message.id,
+                        last_message_date=message.created_at,
+                        discord_id=ctx.author.id
+                    ))
+
+            await ctx.send(f"{channel.mention} will now be streamed to **{document.content['title']}**.")
+
+    async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI):
+        channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
+        try:
+            message = await channel.fetch_message(doc.last_message)
+        except (discord.NotFound, discord.HTTPException):
+            message = None
+        after = message if message else doc.last_message_date
+
+        messages = await channel.history(limit=None, after=after, oldest_first=False).flatten()
+        updates = self.messages_to_doc_json(messages)
+
+        if updates:
+            try:
+                await google.as_user(docs_v1.documents.batchUpdate(
+                    documentId=doc.doc_id,
+                    json={'requests': updates}
+                ))
+                doc.last_message = messages[0].id
+                doc.last_message_date = messages[0].created_at
+            except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError):
+                doc.token.valid = False
+
+                try:
+                    user = await self.bot.fetch_user(doc.token.id)
+                except (discord.NotFound, discord.HTTPException):
+                    user = None
+                if user:
+                    await user.send(
+                        ('Your authentication token is no longer valid, '
+                        'please refresh it with the `/authentication register` command.')
+                    )
+
+    @loop(minutes=2)
+    async def stream_loop(self):
+        coroutines = []
+        googles = []
+        print('Streaming like AnneMunition!')
+        async with AsyncSession(engine) as sess, sess.begin():
+            for token in (await sess.execute(select(Token).where(Token.documents.any()))).scalars().all():
+                if token.valid:
+                    try:
+                        if token.is_expired():
+                            user_creds = await aio_google.oauth2.refresh(token.user_creds())
+                            token.token = user_creds.access_token
+                            token.expiry = user_creds.expires_at
+                            if user_creds.refresh_token:
+                                token.refresh_token = user_creds.refresh_token
+                        else:
+                            user_creds = token.user_creds()
+                    except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError):
+                        try:
+                            user = await self.bot.fetch_user(token.id)
+                        except (discord.NotFound, discord.HTTPException):
+                            user = None
+                        token.valid = False
+                        if user:
+                            await user.send(
+                                ('Your authentication token is no longer valid, '
+                                'please refresh it with the `/authentication register` command.')
+                            )
+                        continue
+
+                    googles.append(Aiogoogle(user_creds=user_creds, client_creds=client_creds))
+                    docs_v1 = await googles[-1].discover('docs', 'v1')
+                    for doc in token.documents:
+                        coroutines.append(self.update(doc, googles[-1], docs_v1))
+
+            async with contextlib.AsyncExitStack() as stack:
+                for google in googles:
+                    await stack.enter_async_context(google)
+                await asyncio.gather(*coroutines)
