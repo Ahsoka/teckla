@@ -294,7 +294,8 @@ class CommandsCog(Cog):
                         'please refresh it with the `/authenticate register` command.')
                     )
 
-    @loop(minutes=2)
+    timer = loop(seconds=10) if config.testing else loop(minutes=2)
+    @timer
     async def stream_loop(self):
         coroutines = []
         googles = []
