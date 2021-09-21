@@ -89,5 +89,6 @@ class Document:
 
     token: List[Token] = field(
         default_factory=list,
-        metadata={'sa': relationship(Token, lazy='selectin', back_populates='documents')}
+        metadata={'sa': relationship(Token, lazy='selectin', back_populates='documents')},
+        repr=False
     )
