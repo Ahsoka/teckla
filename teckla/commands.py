@@ -179,11 +179,17 @@ class CommandsCog(Cog):
                 "Select the channel to upload messages from, if there is no input the current channel is selected.",
                 7,
                 required=False
+            ),
+            create_option(
+                'name',
+                "Name for the new document.",
+                str,
+                required=False
             )
         ]
     )
     @ladyalpha_perm_decorator
-    async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
+    async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None, name: str = None):
         if channel is None:
             channel = ctx.channel
         if not channel.permissions_for(ctx.me).read_message_history:
@@ -197,8 +203,9 @@ class CommandsCog(Cog):
             async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
 
+                kwarg = {'data': {'title': name}} if name else {}
                 document = await google.as_user(
-                    docs_v1.documents.create(data={'title': 'Testing :D'}),
+                    docs_v1.documents.create(**kwarg),
                     full_res=True
                 )
 
