@@ -6,9 +6,15 @@ from aiogoogle import Aiogoogle
 import json
 import discord
 import argparse
+import ipaddress
 
 parser = argparse.ArgumentParser(description='Use this to set bot settings.')
 parser.add_argument('-nt', '--not-testing', action='store_false', dest='testing')
+parser.add_argument(
+    '--host',
+    type=lambda ip: ipaddress.IPv4Address('127.0.0.1' if ip == 'localhost' else ip),
+    default='localhost'
+)
 
 config = parser.parse_args()
 

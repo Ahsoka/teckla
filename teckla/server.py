@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from . import aio_google, engine, config
 from .tables import Token, Scope
-from . import aio_google, engine
 from .commands import states
 
 import aiohttp.web
@@ -12,7 +12,7 @@ routes = aiohttp.web.RouteTableDef()
 async def start_server():
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, 'localhost')
+    site = aiohttp.web.TCPSite(runner, str(config.host))
     await site.start()
 
 @routes.get('/')
