@@ -1,8 +1,8 @@
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.decl_api import registry
 from aiogoogle.auth.creds import UserCreds
 from dataclasses import dataclass, field
-from sqlalchemy.orm import relationship
 from typing import List
 
 import datetime
@@ -17,7 +17,14 @@ class Scope:
 
     __sa_dataclass_metadata_key__ = 'sa'
 
-    id: int = field(metadata={'sa': Column(BigInteger, ForeignKey('tokens.id'), primary_key=True)})
+    id: int = field(metadata={
+        'sa': Column(
+                BigInteger,
+                ForeignKey('tokens.id', ondelete='CASCADE', onupdate='CASCADE'),
+                primary_key=True
+            )
+        }
+    )
     scope: str = field(metadata={'sa': Column(String(200), primary_key=True)})
 
 
@@ -36,7 +43,15 @@ class Token:
     refresh_token: str = field(default=None, metadata={'sa': Column(String(200))})
 
     scopes: List[Scope] = field(
-        default_factory=list, metadata={'sa': relationship(Scope, lazy='selectin')}
+        default_factory=list,
+        metadata={
+            'sa': relationship(
+                Scope,
+                lazy='selectin',
+                cascade='all, delete-orphan',
+                backref=backref('token', lazy='selectin')
+            )
+        }
     )
 
     def user_creds(self):
