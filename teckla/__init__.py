@@ -5,6 +5,12 @@ from aiogoogle import Aiogoogle
 
 import json
 import discord
+import argparse
+
+parser = argparse.ArgumentParser(description='Use this to set bot settings.')
+parser.add_argument('-nt', '--not-testing', action='store_false', dest='testing')
+
+config = parser.parse_args()
 
 engine = create_async_engine('sqlite+aiosqlite:///test.db')
 
