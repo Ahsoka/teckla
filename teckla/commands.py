@@ -172,9 +172,11 @@ class CommandsCog(Cog):
         ]
     )
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None):
-        if token := await self.is_authenticated(ctx):
-            if channel is None:
-                channel = ctx.channel
+        if channel is None:
+            channel = ctx.channel
+        if not channel.permissions_for(ctx.me).read_message_history:
+            await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
+        elif token := await self.is_authenticated(ctx):
             await ctx.defer()
             user_creds = token.user_creds()
 
@@ -214,10 +216,12 @@ class CommandsCog(Cog):
         ]
     )
     async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
-        if token := await self.is_authenticated(ctx):
+        if channel is None:
+            channel = ctx.channel
+        if not channel.permissions_for(ctx.me).read_message_history:
+            await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
+        elif token := await self.is_authenticated(ctx):
             await ctx.defer()
-            if channel is None:
-                channel = ctx.channel
             async with Aiogoogle(user_creds=token.user_creds(), client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
                 kwarg = {'data': {'title': name}} if name else {}
