@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
 from discord_slash.cog_ext import cog_slash
 from discord.ext.commands import Cog, Bot
+from typing import Dict, Tuple, Iterable
 from discord_slash import SlashContext
 from aiogoogle import Aiogoogle
-from typing import Dict, Tuple
 from datetime import datetime
 from .tables import Token
 
@@ -73,6 +73,50 @@ class CommandsCog(Cog):
                 await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
                 # TODO: Send message to @Ahsoka to fix it.
 
+    def messages_to_doc_json(self, messages: Iterable[discord.Message]):
+        updates = []
+        current_loc = 1
+        for message in messages:
+            header_text = f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n"
+            header = {
+                'insertText': {
+                    'text': header_text, 'location': {'index': current_loc}
+                }
+            }
+            header_format = {
+                'updateTextStyle': {
+                    'textStyle': {
+                        'bold': True,
+                    },
+                    'fields': 'bold',
+                    'range': {
+                        'startIndex': current_loc,
+                        'endIndex': current_loc + len(header_text)
+                    }
+                }
+            }
+            updates.append(header)
+            updates.append(header_format)
+
+            current_loc += len(header_text)
+
+            body_text = f"{message.content}\n\n"
+            # NOTE: Weird bug with Google Docs where the first \n is not registered
+            # if the last character preceeding the \n is an emoji character
+            # Example: '😜\n\n' will only have one enter and not the expected two
+            if message.content and emoji.get_emoji_regexp().match(message.content[-1]):
+                body_text += '\n'
+            body = {
+                'insertText': {
+                    'text': body_text, 'location': {'index': current_loc}
+                }
+            }
+            updates.append(body)
+
+            current_loc += len(body_text)
+
+        return updates
+
     @cog_slash(
         name='upload',
         description="Upload the messages in the selected channel to a Google Doc.",
@@ -98,46 +142,7 @@ class CommandsCog(Cog):
             await ctx.defer()
             user_creds = token.user_creds()
 
-            updates = []
-            current_loc = 1
-            async for message in channel.history(limit=messages):
-                header_text = f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n"
-                header = {
-                    'insertText': {
-                        'text': header_text, 'location': {'index': current_loc}
-                    }
-                }
-                header_format = {
-                    'updateTextStyle': {
-                        'textStyle': {
-                            'bold': True,
-                        },
-                        'fields': 'bold',
-                        'range': {
-                            'startIndex': current_loc,
-                            'endIndex': current_loc + len(header_text)
-                        }
-                    }
-                }
-                updates.append(header)
-                updates.append(header_format)
-
-                current_loc += len(header_text)
-
-                body_text = f"{message.content}\n\n"
-                # NOTE: Weird bug with Google Docs where the first \n is not registered
-                # if the last character preceeding the \n is an emoji character
-                # Example: '😜\n\n' will only have one enter and not the expected two
-                if message.content and emoji.get_emoji_regexp().match(message.content[-1]):
-                    body_text += '\n'
-                body = {
-                    'insertText': {
-                        'text': body_text, 'location': {'index': current_loc}
-                    }
-                }
-                updates.append(body)
-
-                current_loc += len(body_text)
+            updates = self.messages_to_doc_json(await channel.history(limit=messages).flatten())
 
             async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
