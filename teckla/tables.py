@@ -63,3 +63,18 @@ class Token:
 
     def is_expired(self):
         return self.expiry < datetime.datetime.today()
+
+
+@mapper.mapped
+@dataclass
+class Document:
+    __tablename__ = 'documents'
+    __sa_dataclass_metadata_key__ = 'sa'
+
+    doc_id: str = field(metadata={'sa': Column(String(44), primary_key=True)})
+    channel_id: int = field(metadata={'sa': Column(BigInteger, primary_key=True)})
+    last_message: int = field(metadata={'sa': Column(BigInteger, nullable=False)})
+    last_message_date: datetime.datetime = field(metadata={'sa': Column(DateTime(timezone=True))})
+    discord_id: int = field(
+        metadata={'sa': Column(BigInteger, ForeignKey(Token.id, ondelete='CASCADE', onupdate='CASCADE'))}
+    )
