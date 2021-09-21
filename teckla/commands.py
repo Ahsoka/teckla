@@ -39,8 +39,9 @@ class CommandsCog(Cog):
             )
         return False
 
-    @cog_ext.cog_slash(
-        name='authenticate',
+    @cog_ext.cog_subcommand(
+        base='authenticate',
+        name='register',
         description='Register your Google account so you can use the other commands.'
     )
     async def authenticate(self, ctx: SlashContext):
