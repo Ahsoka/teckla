@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.decl_api import registry
 from aiogoogle.auth.creds import UserCreds
@@ -41,6 +41,7 @@ class Token:
         metadata={'sa': Column(DateTime(timezone=True), nullable=False)}
     )
     refresh_token: str = field(default=None, metadata={'sa': Column(String(200))})
+    valid: bool = field(default=True, metadata={'sa': Column(Boolean, nullable=False)})
 
     scopes: List[Scope] = field(
         default_factory=list,
