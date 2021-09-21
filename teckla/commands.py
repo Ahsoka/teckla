@@ -1,6 +1,6 @@
 from discord_slash.utils.manage_commands import create_option, create_permission
+from . import aio_google, client_creds, engine, config
 from sqlalchemy.ext.asyncio import AsyncSession
-from . import aio_google, client_creds, engine
 from discord.ext.commands import Cog, Bot
 from typing import Dict, Iterable, Tuple
 from aiogoogle.resource import GoogleAPI
@@ -21,14 +21,17 @@ import emoji
 
 states: Dict[str, Tuple[int, asyncio.Event]]  = {}
 
-ladyalpha_perm_decorator = cog_ext.permission(
-    809089261100859402,
-    [
-        create_permission(809185433241387051, 1, True),
-        create_permission(809196070587334657, 1, False),
-        create_permission(832351220840136745, 1, False),
-    ]
-)
+if config.testing:
+    ladyalpha_perm_decorator = lambda func: func
+else:
+    ladyalpha_perm_decorator = cog_ext.permission(
+        809089261100859402,
+        [
+            create_permission(809185433241387051, 1, True),
+            create_permission(809196070587334657, 1, False),
+            create_permission(832351220840136745, 1, False),
+        ]
+    )
 
 
 class CommandsCog(Cog):
