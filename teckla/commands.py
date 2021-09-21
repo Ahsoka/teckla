@@ -97,11 +97,7 @@ class CommandsCog(Cog):
             if channel is None:
                 channel = ctx.channel
             await ctx.defer()
-            user_creds = UserCreds(
-                access_token=token.token,
-                refresh_token=token.refresh_token,
-                expires_at=token.expiry.isoformat()
-            )
+            user_creds = token.user_creds()
 
             updates = []
             current_loc = 1
