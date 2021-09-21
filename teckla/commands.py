@@ -39,7 +39,7 @@ class CommandsCog(Cog):
             token: Token = await sess.get(Token, ctx.author.id)
         if token and token.expiry < datetime.today():
             await ctx.send(
-                'Your token is no longer valid, please use `/authenticate` to refresh your token.'
+                'Your token is no longer valid, please use `/authenticate register` to refresh your token.'
             )
         elif token:
             return token
@@ -47,7 +47,7 @@ class CommandsCog(Cog):
             await ctx.send(
                 (
                     "Before you can use this command you must first use the "
-                    "`/authenticate` command to register your Google account."
+                    "`/authenticate register` command to register your Google account."
                 )
             )
         return False
@@ -263,7 +263,7 @@ class CommandsCog(Cog):
                 if user:
                     await user.send(
                         ('Your authentication token is no longer valid, '
-                        'please refresh it with the `/authentication register` command.')
+                        'please refresh it with the `/authenticate register` command.')
                     )
 
     @loop(minutes=2)
@@ -292,7 +292,7 @@ class CommandsCog(Cog):
                         if user:
                             await user.send(
                                 ('Your authentication token is no longer valid, '
-                                'please refresh it with the `/authentication register` command.')
+                                'please refresh it with the `/authenticate register` command.')
                             )
                         continue
 
