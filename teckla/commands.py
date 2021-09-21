@@ -2,7 +2,6 @@ from discord_slash.utils.manage_commands import create_option
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import aio_google, client_creds, engine
 from discord_slash.cog_ext import cog_slash
-from aiogoogle.auth.creds import UserCreds
 from discord.ext.commands import Cog, Bot
 from discord_slash import SlashContext
 from aiogoogle import Aiogoogle
