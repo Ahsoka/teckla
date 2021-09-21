@@ -34,6 +34,8 @@ async def get_creds(request: aiohttp.web.Request):
             else:
                 sess.add(Token(id=discord_id, token=access_token, expiry=expiry, scopes=scopes))
         states[state][1].set()
+        del states[state]
+
     return aiohttp.web.Response(text="Hello world! 😉")
 
 app.add_routes(routes)
