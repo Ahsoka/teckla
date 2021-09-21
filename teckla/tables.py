@@ -1,5 +1,6 @@
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey
 from sqlalchemy.orm.decl_api import registry
+from aiogoogle.auth.creds import UserCreds
 from dataclasses import dataclass, field
 from sqlalchemy.orm import relationship
 from typing import List
@@ -37,3 +38,10 @@ class Token:
     scopes: List[Scope] = field(
         default_factory=list, metadata={'sa': relationship(Scope, lazy='selectin')}
     )
+
+    def user_creds(self):
+        return UserCreds(
+            access_token=self.token,
+            refresh_token=self.refresh_token,
+            expires_at=self.expiry.isoformat()
+        )
