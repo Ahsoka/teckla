@@ -238,7 +238,7 @@ class CommandsCog(Cog):
 
             await ctx.send(f"{channel.mention} will now be streamed to **{document.content['title']}**.")
 
-    async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI):
+    async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI, sess: AsyncSession):
         channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
         try:
             message = await channel.fetch_message(doc.last_message)
@@ -259,7 +259,8 @@ class CommandsCog(Cog):
                 doc.last_message_date = messages[0].created_at
             except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError):
                 doc.token.valid = False
-
+                await sess.commit()
+                await sess.refresh(doc)
                 try:
                     user = await self.bot.fetch_user(doc.token.id)
                 except (discord.NotFound, discord.HTTPException):
@@ -275,7 +276,7 @@ class CommandsCog(Cog):
         coroutines = []
         googles = []
         print('Streaming like AnneMunition!')
-        async with AsyncSession(engine) as sess, sess.begin():
+        async with AsyncSession(engine) as sess:
             for token in (await sess.execute(select(Token).where(Token.documents.any()))).scalars().all():
                 if token.valid:
                     try:
@@ -287,12 +288,14 @@ class CommandsCog(Cog):
                                 token.refresh_token = user_creds.refresh_token
                         else:
                             user_creds = token.user_creds()
-                    except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError):
+                    except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
+                        token.valid = False
+                        await sess.commit()
+                        await sess.refresh(token)
                         try:
                             user = await self.bot.fetch_user(token.id)
                         except (discord.NotFound, discord.HTTPException):
                             user = None
-                        token.valid = False
                         if user:
                             await user.send(
                                 ('Your authentication token is no longer valid, '
@@ -303,9 +306,25 @@ class CommandsCog(Cog):
                     googles.append(Aiogoogle(user_creds=user_creds, client_creds=client_creds))
                     docs_v1 = await googles[-1].discover('docs', 'v1')
                     for doc in token.documents:
-                        coroutines.append(self.update(doc, googles[-1], docs_v1))
+                        channel = self.bot.get_channel(doc.channel_id)
+                        if channel.permissions_for(channel.guild.me).read_message_history:
+                            coroutines.append(self.update(doc, googles[-1], docs_v1, sess))
+                            doc.readable = True
+                        elif doc.readable:
+                            doc.readable = False
+                            await sess.commit()
+                            try:
+                                await sess.refresh(doc)
+                                user = await self.bot.fetch_user(doc.token.id)
+                                print(f"{doc.token.id=}")
+                            except (discord.NotFound, discord.HTTPException):
+                                user = None
+                            if user:
+                                await user.send(f'I can no longer read messages in {channel.mention}, please give me the read messages permission.')
 
             async with contextlib.AsyncExitStack() as stack:
                 for google in googles:
                     await stack.enter_async_context(google)
                 await asyncio.gather(*coroutines)
+
+            await sess.commit()
