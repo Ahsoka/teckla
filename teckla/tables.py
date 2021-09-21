@@ -18,7 +18,7 @@ class Scope:
     __sa_dataclass_metadata_key__ = 'sa'
 
     id: int = field(metadata={'sa': Column(BigInteger, ForeignKey('tokens.id'), primary_key=True)})
-    scope: str = field(metadata={'sa': Column(String(200), nullable=False)})
+    scope: str = field(metadata={'sa': Column(String(200), primary_key=True)})
 
 
 @mapper.mapped
