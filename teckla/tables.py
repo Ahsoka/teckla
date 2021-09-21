@@ -60,3 +60,6 @@ class Token:
             refresh_token=self.refresh_token,
             expires_at=self.expiry.isoformat()
         )
+
+    def is_expired(self):
+        return self.expiry < datetime.datetime.today()
