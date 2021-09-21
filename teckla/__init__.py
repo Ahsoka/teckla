@@ -6,9 +6,10 @@ from aiogoogle import Aiogoogle
 import json
 import discord
 
-engine = create_async_engine('sqlite+aiosqlite:///:memory:')
+engine = create_async_engine('sqlite+aiosqlite:///test.db')
 
 bot = Bot(command_prefix='/', intents=discord.Intents(messages=True, guilds=True))
+# slash = SlashCommand(bot, sync_commands=True)
 slash = SlashCommand(bot)
 
 with open('credentials.json') as file:
