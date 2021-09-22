@@ -87,8 +87,4 @@ class Document:
     )
     readable: bool = field(default=True, metadata={'sa': Column(Boolean, nullable=False)})
 
-    token: List[Token] = field(
-        default_factory=list,
-        metadata={'sa': relationship(Token, lazy='selectin', back_populates='documents')},
-        repr=False
-    )
+    token: Token = field(init=False, metadata={'sa': relationship(Token, lazy='selectin', back_populates='documents')}, repr=False)
