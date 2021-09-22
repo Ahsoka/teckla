@@ -50,6 +50,6 @@ async def get_creds(request: aiohttp.web.Request):
         return aiohttp.web.Response(text='Congratulations, you have successfully authenticated! You may close this window.')
     else:
         logger.debug('Received invalid request.')
-        return aiohttp.web.Response(body="Authentication failed, please using the /authenticate register command again.", status=401)
+        return aiohttp.web.Response(body="Authentication failed, please use the /authenticate register command again.", status=401)
 
 app.add_routes(routes)
