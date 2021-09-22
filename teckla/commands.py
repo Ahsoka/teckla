@@ -197,9 +197,9 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None, name: str = None):
-        logger.info(f'{ctx.author} used the /upload command.')
         if channel is None:
             channel = ctx.channel
+        logger.info(f'{ctx.author} used the /upload command to upload {channel}.')
         if not channel.permissions_for(ctx.me).read_message_history:
             logger.warning(f'{ctx.author} failed using the /upload command since the bot cannot read the select channel {channel}.')
             await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
@@ -254,9 +254,9 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
-        logger.info(f"{ctx.author} used the /stream command.")
         if channel is None:
             channel = ctx.channel
+        logger.info(f"{ctx.author} used the /stream command to stream {channel}.")
         if not channel.permissions_for(ctx.me).read_message_history:
             logger.warning(f"{ctx.author} failed using the /stream command since the bot could not read the selected channel.")
             await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
