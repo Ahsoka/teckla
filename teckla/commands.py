@@ -33,6 +33,7 @@ else:
             create_permission(809185433241387051, 1, True),
             create_permission(809196070587334657, 1, False),
             create_permission(832351220840136745, 1, False),
+            create_permission(809089261100859402, 1, False)
         ]
     )
 
