@@ -17,7 +17,10 @@ import aiogoogle
 import asyncio
 import discord
 import secrets
+import logging
 import emoji
+
+logger = logging.getLogger(__name__)
 
 states: Dict[str, Tuple[int, asyncio.Event]]  = {}
 
@@ -72,10 +75,13 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def authenticate(self, ctx: SlashContext, force: bool = False):
+        if not force:
+            logger.info(f'{ctx.author} used the /authenticate register command.')
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
 
         if token and token.expiry > datetime.today() and token.valid and not force:
+            logger.info(f'{ctx.author} tried to authenticate themself even though they are already authenticated.')
             await ctx.send('You are already authenticated!', hidden=True)
         else:
             if aio_google.oauth2.is_ready(client_creds):
@@ -98,6 +104,7 @@ class CommandsCog(Cog):
                     hidden=True
                 )
             else:
+                logger.critical('Something is wrong with the client credentials.')
                 await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
                 # TODO: Send message to @Ahsoka to fix it.
 
@@ -108,6 +115,7 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def auth_force(self, ctx: SlashContext):
+        logger.info(f'{ctx.author} used the /authenticate force command.')
         await self.authenticate.invoke(ctx, force=True)
 
     def messages_to_doc_json(self, messages: Iterable[discord.Message]):
@@ -193,9 +201,11 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def upload(self, ctx: SlashContext, messages: int = None, channel: discord.TextChannel = None, name: str = None):
+        logger.info(f'{ctx.author} used the /upload command.')
         if channel is None:
             channel = ctx.channel
         if not channel.permissions_for(ctx.me).read_message_history:
+            logger.warning(f'{ctx.author} failed using the /upload command since the bot cannot read the select channel {channel}.')
             await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
         elif token := await self.is_authenticated(ctx):
             await ctx.defer()
@@ -211,11 +221,20 @@ class CommandsCog(Cog):
                     docs_v1.documents.create(**kwarg),
                     full_res=True
                 )
+                logger.info(
+                    (f"A Google Doc titled {name if name else 'Untitled Document'} "
+                    f"was successfully created for {ctx.author}.")
+                )
 
                 await google.as_user(docs_v1.documents.batchUpdate(
                     documentId=document.content['documentId'],
                     json={'requests': updates}
                 ))
+
+                logger.info(
+                    (f"The previous created Google Doc titled {name if name else 'Untitled Document'} "
+                    f"was successfully updated for {ctx.author}.")
+                )
 
             await ctx.send(f"Successfully uploaded to **{document.content['title']}**.")
 
@@ -239,9 +258,11 @@ class CommandsCog(Cog):
     )
     @ladyalpha_perm_decorator
     async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
+        logger.info(f"{ctx.author} used the /stream command.")
         if channel is None:
             channel = ctx.channel
         if not channel.permissions_for(ctx.me).read_message_history:
+            logger.warning(f"{ctx.author} failed using the /stream command since the bot could not read the selected channel.")
             await ctx.send(f"🛑 Uh oh! I can't read {channel.mention}. Please give me permission to read it.")
         elif token := await self.is_authenticated(ctx):
             await ctx.defer()
@@ -278,9 +299,11 @@ class CommandsCog(Cog):
                     documentId=doc.doc_id,
                     json={'requests': updates}
                 ))
+                logger.debug(f"Successfully updated {doc.doc_id} with {len(messages)} message(s).")
                 doc.last_message = messages[0].id
                 doc.last_message_date = messages[0].created_at
-            except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError):
+            except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
+                logger.warning(f"Failed to updated {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
                 doc.token.valid = False
                 await sess.commit()
                 await sess.refresh(doc)
@@ -293,19 +316,24 @@ class CommandsCog(Cog):
                         ('Your authentication token is no longer valid, '
                         'please refresh it with the `/authenticate register` command.')
                     )
+                    logger.info(f"Successfully notified {user} about a potentially invalid token.")
+        else:
+            logger.debug(f"No updates detected for {doc.doc_id}.")
 
     timer = loop(seconds=10) if config.testing else loop(minutes=2)
     @timer
     async def stream_loop(self):
         coroutines = []
         googles = []
-        print('Streaming like AnneMunition!')
+        logger.debug('Streaming like AnneMunition!')
         async with AsyncSession(engine) as sess:
             for token in (await sess.execute(select(Token).where(Token.documents.any()))).scalars().all():
                 if token.valid:
                     try:
                         if token.is_expired():
+                            logger.warning(f'Detected an expired token for {token.id}.')
                             user_creds = await aio_google.oauth2.refresh(token.user_creds())
+                            logger.info(f"Successfully refreshed {token.id}'s token.")
                             token.token = user_creds.access_token
                             token.expiry = datetime.fromisoformat(user_creds.expires_at)
                             if user_creds.refresh_token:
@@ -313,6 +341,7 @@ class CommandsCog(Cog):
                         else:
                             user_creds = token.user_creds()
                     except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
+                        logger.warning(f"Detected invalid token for {token.id}", exc_info=error)
                         token.valid = False
                         await sess.commit()
                         await sess.refresh(token)
@@ -325,6 +354,7 @@ class CommandsCog(Cog):
                                 ('Your authentication token is no longer valid, '
                                 'please refresh it with the `/authenticate register` command.')
                             )
+                            logger.info(f'Successfully notified {user} ({token.id}) about the invalid token.')
                         continue
 
                     googles.append(Aiogoogle(user_creds=user_creds, client_creds=client_creds))
@@ -335,6 +365,7 @@ class CommandsCog(Cog):
                             coroutines.append(self.update(doc, googles[-1], docs_v1, sess))
                             doc.readable = True
                         elif doc.readable:
+                            logger.warning(f"Detected channel {channel} ({channel.id}) that the bot can longer read.")
                             doc.readable = False
                             await sess.commit()
                             try:
@@ -345,6 +376,10 @@ class CommandsCog(Cog):
                                 user = None
                             if user:
                                 await user.send(f'I can no longer read messages in {channel.mention}, please give me the read messages permission.')
+                                logger.info(
+                                    (f'Successfully notified {user} ({doc.token.id}) '
+                                    f'about the issue with {channel} ({channel.id}).')
+                                )
 
             async with contextlib.AsyncExitStack() as stack:
                 for google in googles:
@@ -358,4 +393,5 @@ class CommandsCog(Cog):
         description="Use this to get the link to the bot's source code!."
     )
     async def source(self, ctx: SlashContext):
+        logger.info(f'{ctx.author} used the /source command.')
         await ctx.send('View the source here: https://github.com/Ahsoka/teckla')

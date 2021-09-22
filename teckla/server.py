@@ -3,8 +3,11 @@ from . import aio_google, engine, config
 from .tables import Token, Scope
 from .commands import states
 
+import logging
 import aiohttp.web
 import dateutil.parser
+
+logger = logging.getLogger(__name__)
 
 app = aiohttp.web.Application()
 routes = aiohttp.web.RouteTableDef()
@@ -14,10 +17,12 @@ async def start_server():
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, str(config.host))
     await site.start()
+    logger.info("Successfully started webserver.")
 
 @routes.get('/')
 async def get_creds(request: aiohttp.web.Request):
     if (state := request.query.get('state')) in states:
+        logger.info(f"Received query with valid state token: '{state}'.")
         full_user_creds = await aio_google.oauth2.build_user_creds(request.query.get('code'))
         async with AsyncSession(engine) as sess, sess.begin():
             discord_id = states[state][0]
@@ -37,11 +42,13 @@ async def get_creds(request: aiohttp.web.Request):
                 token.valid = True
             else:
                 sess.add(Token(id=discord_id, token=access_token, expiry=expiry, scopes=scopes, refresh_token=refresh_token))
+        logger.info(f'Successfully received and stored token info for {discord_id}.')
         states[state][1].set()
         del states[state]
 
         return aiohttp.web.Response(text='Congratulations, you have successfully authenticated! You may close this window.')
     else:
+        logger.debug('Received invalid request.')
         return aiohttp.web.Response(body="Authentication failed, please using the /authenticate register command again.", status=401)
 
 app.add_routes(routes)
