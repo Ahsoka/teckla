@@ -19,7 +19,7 @@ async def start_server():
     await site.start()
     logger.info("Successfully started webserver.")
 
-@routes.get('/')
+@routes.get('/' if config.testing else '/teckla-authenticate')
 async def get_creds(request: aiohttp.web.Request):
     if (state := request.query.get('state')) in states:
         logger.info(f"Received query with valid state token: '{state}'.")
