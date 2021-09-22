@@ -422,7 +422,7 @@ class CommandsCog(Cog):
 
     @Cog.listener()
     async def on_slash_command_error(self, ctx: SlashContext, error: Exception):
-        message = f"The following error occured with the {ctx.name}:"
+        message = f"The following error occured with the {ctx.name} command:"
 
         logger.critical(message, exc_info=error)
 
