@@ -302,21 +302,35 @@ class CommandsCog(Cog):
                 logger.debug(f"Successfully updated {doc.doc_id} with {len(messages)} message(s).")
                 doc.last_message = messages[0].id
                 doc.last_message_date = messages[0].created_at
-            except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
+            except aiogoogle.excs.HTTPError as error:
                 logger.warning(f"Failed to updated {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
-                doc.token.valid = False
+                discord_id = doc.token.id
+                if error.res.status_code == 404:
+                    user_message = (
+                        f"The document used for streaming <#{doc.channel_id}> has been deleted. "
+                        f"Streaming for <#{doc.channel_id}> will now stop, use /stream to restart with a new document."
+                    )
+                    log_message = (
+                        'Detected deleted document, document has been deleted from database and '
+                        '{user} has been notified about the missing document.'
+                    )
+                    await sess.delete(doc)
+                else:
+                    doc.token.valid = False
+                    user_message = (
+                        'Your authentication token is no longer valid, '
+                        'please refresh it with the `/authenticate register` command.'
+                    )
+                    log_message = "Successfully notified {user} about a potentially invalid token."
                 await sess.commit()
-                await sess.refresh(doc)
+
                 try:
-                    user = await self.bot.fetch_user(doc.token.id)
-                except (discord.NotFound, discord.HTTPException):
+                    user = await self.bot.fetch_user(discord_id)
+                except discord.HTTPException:
                     user = None
                 if user:
-                    await user.send(
-                        ('Your authentication token is no longer valid, '
-                        'please refresh it with the `/authenticate register` command.')
-                    )
-                    logger.info(f"Successfully notified {user} about a potentially invalid token.")
+                    await user.send(user_message)
+                    logger.info(log_message.format(user=user))
         else:
             logger.debug(f"No updates detected for {doc.doc_id}.")
 
