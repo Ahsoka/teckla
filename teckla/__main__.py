@@ -1,13 +1,9 @@
+from . import bot, engine, client_creds
 from .server import start_server
-from dotenv import load_dotenv
 from sqlalchemy import text
 from .tables import mapper
-from . import bot, engine
 
-import os
 import asyncio
-
-load_dotenv()
 
 bot.tables_created = asyncio.Event()
 
@@ -22,7 +18,7 @@ async def on_ready():
 
 def main():
     bot.loop.create_task(start_server())
-    bot.run(os.environ['testing-token'])
+    bot.run(client_creds['bot-token'])
 
 if __name__ == '__main__':
     main()
