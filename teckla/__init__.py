@@ -18,7 +18,7 @@ parser.add_argument(
 
 config = parser.parse_args()
 
-engine = create_async_engine('sqlite+aiosqlite:///test.db')
+engine = create_async_engine(f"sqlite+aiosqlite:///{'test.db' if config.testing else 'bot.db'}")
 
 bot = Bot(command_prefix='/', intents=discord.Intents(messages=True, guilds=True))
 # slash = SlashCommand(bot, sync_commands=True)
