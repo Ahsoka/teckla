@@ -416,4 +416,4 @@ class CommandsCog(Cog):
     )
     async def source(self, ctx: SlashContext):
         logger.info(f'{ctx.author} used the /source command.')
-        await ctx.send('View the source here: https://github.com/Ahsoka/teckla')
+        await ctx.send('View the source code here: https://github.com/Ahsoka/teckla')
