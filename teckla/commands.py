@@ -104,9 +104,10 @@ class CommandsCog(Cog):
                     hidden=True
                 )
             else:
-                logger.critical('Something is wrong with the client credentials.')
+                message = f'Something is wrong with the client credentials.\nclient_creds={client_creds}'
+                logger.critical(message)
                 await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
-                # TODO: Send message to @Ahsoka to fix it.
+                await (await self.bot.fetch_user(388899325885022211)).send(message)
 
     @cog_ext.cog_subcommand(
         base='authenticate',
