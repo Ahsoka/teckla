@@ -402,6 +402,13 @@ class CommandsCog(Cog):
 
             await sess.commit()
 
+    @stream_loop.error
+    async def handle_stream_loop_error(self, error: Exception):
+        logger.critical('stream_loop task crashed due to:', exc_info=error)
+        await (await self.bot.fetch_user(388899325885022211)).send(
+            f'Bot crashed due to the following error: ```\n{repr(error)}```'
+        )
+
     @cog_ext.cog_slash(
         name='source',
         description="Use this to get the link to the bot's source code!."
