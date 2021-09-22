@@ -3,6 +3,7 @@ from . import aio_google, engine, config
 from .tables import Token, Scope
 from .commands import states
 
+import sys
 import logging
 import aiohttp.web
 import dateutil.parser
@@ -19,7 +20,7 @@ async def start_server():
     await site.start()
     logger.info("Successfully started webserver.")
 
-@routes.get('/' if config.testing else '/teckla-authenticate')
+@routes.get('/teckla-authenticate' if sys.platform.startswith('linux') else '/')
 async def get_creds(request: aiohttp.web.Request):
     if (state := request.query.get('state')) in states:
         logger.info(f"Received query with valid state token: '{state}'.")
