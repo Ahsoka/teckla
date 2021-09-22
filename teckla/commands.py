@@ -307,7 +307,7 @@ class CommandsCog(Cog):
                         if token.is_expired():
                             user_creds = await aio_google.oauth2.refresh(token.user_creds())
                             token.token = user_creds.access_token
-                            token.expiry = user_creds.expires_at
+                            token.expiry = datetime.fromisoformat(user_creds.expires_at)
                             if user_creds.refresh_token:
                                 token.refresh_token = user_creds.refresh_token
                         else:
