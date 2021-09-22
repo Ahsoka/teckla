@@ -18,7 +18,6 @@ import asyncio
 import discord
 import secrets
 import logging
-import emoji
 
 logger = logging.getLogger(__name__)
 
@@ -138,21 +137,16 @@ class CommandsCog(Cog):
                     'fields': 'bold',
                     'range': {
                         'startIndex': current_loc,
-                        'endIndex': current_loc + len(header_text)
+                        'endIndex': current_loc + len(header_text.encode('utf-16-le')) // 2
                     }
                 }
             }
             updates.append(header)
             updates.append(header_format)
 
-            current_loc += len(header_text)
+            current_loc += len(header_text.encode('utf-16-le')) // 2
 
             body_text = f"{message.content}\n\n"
-            # NOTE: Weird bug with Google Docs where the first \n is not registered
-            # if the last character preceeding the \n is an emoji character
-            # Example: '😜\n\n' will only have one enter and not the expected two
-            if message.content and emoji.get_emoji_regexp().match(message.content[-1]):
-                body_text += '\n'
             body = {
                 'insertText': {
                     'text': body_text, 'location': {'index': current_loc}
@@ -166,14 +160,14 @@ class CommandsCog(Cog):
                     'fields': 'bold',
                     'range': {
                         'startIndex': current_loc,
-                        'endIndex': current_loc + len(body_text)
+                        'endIndex': current_loc + len(body_text.encode('utf-16-le')) // 2
                     }
                 }
             }
             updates.append(body)
             updates.append(body_format)
 
-            current_loc += len(body_text)
+            current_loc += len(body_text.encode('utf-16-le')) // 2
 
         return updates
 
