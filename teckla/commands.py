@@ -297,6 +297,7 @@ class CommandsCog(Cog):
 
         if updates:
             try:
+                await sess.refresh(doc)
                 await google.as_user(docs_v1.documents.batchUpdate(
                     documentId=doc.doc_id,
                     json={'requests': updates}
