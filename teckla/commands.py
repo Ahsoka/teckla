@@ -418,3 +418,13 @@ class CommandsCog(Cog):
     async def source(self, ctx: SlashContext):
         logger.info(f'{ctx.author} used the /source command.')
         await ctx.send('View the source code here: https://github.com/Ahsoka/teckla')
+
+    @Cog.listener()
+    async def on_slash_command_error(self, ctx: SlashContext, error: Exception):
+        message = f"The following error occured with the {ctx.name}:"
+
+        logger.critical(message, exc_info=error)
+
+        await ctx.send('⚠ Uh oh! Something went wrong on our end, please try again later.')
+
+        await (await self.bot.fetch_user(388899325885022211)).send(f"{message}```\n{error!r}```")
