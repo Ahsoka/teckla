@@ -352,3 +352,10 @@ class CommandsCog(Cog):
                 await asyncio.gather(*coroutines)
 
             await sess.commit()
+
+    @cog_ext.cog_slash(
+        name='source',
+        description="Use this to get the link to the bot's source code!."
+    )
+    async def source(self, ctx: SlashContext):
+        await ctx.send('View the source here: https://github.com/Ahsoka/teckla')
