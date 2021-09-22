@@ -3,5 +3,6 @@ aiogoogle
 aiosqlite
 discord.py
 discord-py-slash-command
+python-dateutil
 sqlalchemy>=1.4.3
 emoji
