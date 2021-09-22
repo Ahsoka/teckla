@@ -413,7 +413,7 @@ class CommandsCog(Cog):
 
     @cog_ext.cog_slash(
         name='source',
-        description="Use this to get the link to the bot's source code!."
+        description="Use this to get the link to the bot's source code!"
     )
     async def source(self, ctx: SlashContext):
         logger.info(f'{ctx.author} used the /source command.')
