@@ -207,7 +207,7 @@ class CommandsCog(Cog):
             await ctx.defer()
             user_creds = token.user_creds()
 
-            updates = self.messages_to_doc_json(await channel.history(limit=messages).flatten())
+            updates = self.messages_to_doc_json(await channel.history(limit=messages, oldest_first=True).flatten())
 
             async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
@@ -286,7 +286,7 @@ class CommandsCog(Cog):
             message = None
         after = message if message else doc.last_message_date
 
-        messages = await channel.history(limit=None, after=after, oldest_first=False).flatten()
+        messages = await channel.history(limit=None, after=after, oldest_first=True).flatten()
         updates = self.messages_to_doc_json(messages)
 
         if updates:
