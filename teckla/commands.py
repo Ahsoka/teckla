@@ -262,7 +262,7 @@ class CommandsCog(Cog):
     @cog_ext.cog_subcommand(
         base='stream',
         name='existing',
-        description='Upload the messages in the selected channel to a new Google Doc.',
+        description='Upload the messages in the selected channel to an existing Google Doc.',
         options=[
             create_option(
                 'document-id',
