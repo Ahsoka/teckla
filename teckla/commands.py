@@ -123,9 +123,8 @@ class CommandsCog(Cog):
         logger.info(f'{ctx.author} used the /authenticate force command.')
         await self.authenticate.invoke(ctx, force=True)
 
-    def messages_to_doc_json(self, messages: Iterable[discord.Message]):
+    def messages_to_doc_json(self, messages: Iterable[discord.Message], current_loc: int = 1):
         updates = []
-        current_loc = 1
         for message in messages:
             header_text = f"{message.author} {format(message.created_at, '%m/%d/%Y')}\n"
             header = {
@@ -329,19 +328,28 @@ class CommandsCog(Cog):
             message = None
         after = message if message else doc.last_message_date
 
-        messages = await channel.history(limit=None, after=after, oldest_first=True).flatten()
-        updates = self.messages_to_doc_json(messages)
+        messages = await channel.history(limit=None, after=after).flatten()
 
-        if updates:
+        if messages:
             try:
                 await sess.refresh(doc)
+                document = await google.as_user(
+                    docs_v1.documents.get(documentId=doc.doc_id),
+                    full_res=True
+                )
+                current = 1
+                if body := document.content.get('body'):
+                    if content := body.get('content'):
+                        if content and 'paragraph' in content[-1]:
+                            current = content[-1]['endIndex'] - 1
+                updates = self.messages_to_doc_json(messages, current_loc=current)
                 await google.as_user(docs_v1.documents.batchUpdate(
                     documentId=doc.doc_id,
                     json={'requests': updates}
                 ))
                 logger.debug(f"Successfully updated {doc.doc_id} with {len(messages)} message(s).")
-                doc.last_message = messages[0].id
-                doc.last_message_date = messages[0].created_at
+                doc.last_message = messages[-1].id
+                doc.last_message_date = messages[-1].created_at
             except aiogoogle.excs.HTTPError as error:
                 logger.warning(f"Failed to updated {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
                 discord_id = doc.token.id
@@ -425,7 +433,6 @@ class CommandsCog(Cog):
                             try:
                                 await sess.refresh(doc)
                                 user = await self.bot.fetch_user(doc.token.id)
-                                print(f"{doc.token.id=}")
                             except (discord.NotFound, discord.HTTPException):
                                 user = None
                             if user:
