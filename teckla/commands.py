@@ -82,7 +82,11 @@ class CommandsCog(Cog):
 
         if token and token.expiry > datetime.today() and token.valid and not force:
             logger.info(f'{ctx.author} tried to authenticate themself even though they are already authenticated.')
-            await ctx.send('You are already authenticated!', hidden=True)
+            await ctx.send(
+                ('You are already authenticated! '
+                'Use `/authenticate force` if you want to override your authentication token.'),
+                hidden=True
+            )
         else:
             if aio_google.oauth2.is_ready(client_creds):
                 state = secrets.token_urlsafe()
