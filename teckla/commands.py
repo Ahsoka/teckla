@@ -237,9 +237,10 @@ class CommandsCog(Cog):
 
             await ctx.send(f"Successfully uploaded to **{document.content['title']}**.")
 
-    @cog_ext.cog_slash(
-        name='stream',
-        description='Upload the messages in the selected channel to a Google Doc everyday.',
+    @cog_ext.cog_subcommand(
+        base='stream',
+        name='new',
+        description='Upload the messages in the selected channel to a new Google Doc.',
         options=[
             create_option(
                 'channel',
@@ -256,7 +257,37 @@ class CommandsCog(Cog):
         ]
     )
     @ladyalpha_perm_decorator
-    async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
+    async def stream_new(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None):
+        await self.stream(ctx, channel=channel, name=name)
+
+    @cog_ext.cog_subcommand(
+        base='stream',
+        name='existing',
+        description='Upload the messages in the selected channel to a new Google Doc.',
+        options=[
+            create_option(
+                'document-id',
+                "ID for existing Google Document.",
+                str,
+                required=True
+            ),
+            create_option(
+                'channel',
+                "Select the channel to upload messages from, if there is no input the current channel is selected.",
+                7,
+                required=False
+            )
+        ],
+        connector={'document-id': 'doc_id'}
+    )
+    @ladyalpha_perm_decorator
+    async def stream_existing(self, ctx: SlashContext, doc_id: str, channel: discord.TextChannel = None):
+        await self.stream(ctx, channel=channel, doc_id=doc_id)
+
+    async def stream(self, ctx: SlashContext, channel: discord.TextChannel = None, name: str = None, doc_id: str = None):
+        if name is not None and doc_id is not None:
+            raise TypeError('doc_id and name cannot both be passed in.')
+
         if channel is None:
             channel = ctx.channel
         logger.info(f"{ctx.author} used the /stream command to stream {channel}.")
@@ -267,7 +298,17 @@ class CommandsCog(Cog):
             await ctx.defer()
             async with Aiogoogle(user_creds=token.user_creds(), client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
-                document = await google.as_user(docs_v1.documents.create(data={'title': name if name else str(channel)}), full_res=True)
+                if doc_id:
+                    document = await google.as_user(
+                        docs_v1.documents.get(documentId=doc_id),
+                        full_res=True
+                    )
+                else:
+                    document = await google.as_user(
+                        docs_v1.documents.create(data={'title': name if name else str(channel)}),
+                        full_res=True
+                    )
+
                 async with AsyncSession(engine) as sess, sess.begin():
                     message: discord.Message = await channel.fetch_message(channel.last_message_id)
                     sess.add(Document(
