@@ -118,7 +118,6 @@ class CommandsCog(Cog):
         name='force',
         description="Use this to refresh your access token even if you already have one in the database."
     )
-    @ladyalpha_perm_decorator
     async def auth_force(self, ctx: SlashContext):
         logger.info(f'{ctx.author} used the /authenticate force command.')
         await self.authenticate.invoke(ctx, force=True)
@@ -279,7 +278,6 @@ class CommandsCog(Cog):
         ],
         connector={'document-id': 'doc_id'}
     )
-    @ladyalpha_perm_decorator
     async def stream_existing(self, ctx: SlashContext, doc_id: str, channel: discord.TextChannel = None):
         await self.stream(ctx, channel=channel, doc_id=doc_id)
 
