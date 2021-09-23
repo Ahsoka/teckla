@@ -212,13 +212,12 @@ class CommandsCog(Cog):
             async with Aiogoogle(user_creds=user_creds, client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
 
-                kwarg = {'data': {'title': name}} if name else {}
                 document = await google.as_user(
-                    docs_v1.documents.create(**kwarg),
+                    docs_v1.documents.create(data={'title': name if name else str(channel)}),
                     full_res=True
                 )
                 logger.info(
-                    (f"A Google Doc titled {name if name else 'Untitled Document'} "
+                    (f"A Google Doc titled {document.content['title']} "
                     f"was successfully created for {ctx.author}.")
                 )
 
@@ -228,7 +227,7 @@ class CommandsCog(Cog):
                 ))
 
                 logger.info(
-                    (f"The previous created Google Doc titled {name if name else 'Untitled Document'} "
+                    (f"The previous created Google Doc titled {document.content['title']} "
                     f"was successfully updated for {ctx.author}.")
                 )
 
@@ -264,8 +263,7 @@ class CommandsCog(Cog):
             await ctx.defer()
             async with Aiogoogle(user_creds=token.user_creds(), client_creds=client_creds) as google:
                 docs_v1 = await google.discover('docs', 'v1')
-                kwarg = {'data': {'title': name}} if name else {}
-                document = await google.as_user(docs_v1.documents.create(**kwarg), full_res=True)
+                document = await google.as_user(docs_v1.documents.create(data={'title': name if name else str(channel)}), full_res=True)
                 async with AsyncSession(engine) as sess, sess.begin():
                     message: discord.Message = await channel.fetch_message(channel.last_message_id)
                     sess.add(Document(
