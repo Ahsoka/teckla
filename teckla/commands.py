@@ -328,9 +328,9 @@ class CommandsCog(Cog):
 
         messages = await channel.history(limit=None, after=after).flatten()
 
+        await sess.refresh(doc)
         if messages:
             try:
-                await sess.refresh(doc)
                 document = await google.as_user(
                     docs_v1.documents.get(documentId=doc.doc_id),
                     full_res=True
