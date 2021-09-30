@@ -97,7 +97,7 @@ class CommandsCog(Cog):
                 if (loc := auth_url.find('&include_granted_scopes=null')) != -1:
                     auth_url = auth_url[:loc] + auth_url[loc + len('&include_granted_scopes=null'):]
 
-                await ctx.send(f'Please authenticate yourself at this URL: {auth_url}.', hidden=True)
+                await ctx.send(f'Please authenticate yourself at this URL: {auth_url}', hidden=True)
 
                 await states[state][1].wait()
 
