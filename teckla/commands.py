@@ -451,7 +451,7 @@ class CommandsCog(Cog):
     async def handle_stream_loop_error(self, error: Exception):
         logger.critical('stream_loop task crashed due to:', exc_info=error)
         await (await self.bot.fetch_user(388899325885022211)).send(
-            f'Bot crashed due to the following error: ```\n{repr(error)}```'
+            f'The `stream_loop` crashed due to the following error: ```\n{repr(error)}```'
         )
 
     @cog_ext.cog_slash(
