@@ -349,7 +349,7 @@ class CommandsCog(Cog):
                 doc.last_message = messages[-1].id
                 doc.last_message_date = messages[-1].created_at
             except aiogoogle.excs.HTTPError as error:
-                logger.warning(f"Failed to updated {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
+                logger.warning(f"Failed to update {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
                 discord_id = doc.token.id
                 if error.res.status_code == 404:
                     user_message = (
