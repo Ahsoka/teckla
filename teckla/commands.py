@@ -425,7 +425,7 @@ class CommandsCog(Cog):
                             coroutines.append(self.update(doc, googles[-1], docs_v1, sess))
                             doc.readable = True
                         elif doc.readable:
-                            logger.warning(f"Detected channel {channel} ({channel.id}) that the bot can longer read.")
+                            logger.warning(f"Detected channel {channel} ({channel.id}) that the bot can no longer read.")
                             doc.readable = False
                             await sess.commit()
                             try:
