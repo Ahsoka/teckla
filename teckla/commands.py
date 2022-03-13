@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 import contextlib
+import sqlalchemy
 import aiogoogle
 import asyncio
 import discord
@@ -305,18 +306,30 @@ class CommandsCog(Cog):
                         docs_v1.documents.create(data={'title': name if name else str(channel)}),
                         full_res=True
                     )
+                try:
+                    async with AsyncSession(engine) as sess, sess.begin():
+                        message: discord.Message = await channel.fetch_message(channel.last_message_id)
+                        sess.add(Document(
+                            doc_id=document.content['documentId'],
+                            channel_id=channel.id,
+                            last_message=message.id,
+                            last_message_date=message.created_at,
+                            discord_id=ctx.author.id
+                        ))
+                except sqlalchemy.exc.IntegrityError as error:
+                    logger.info(
+                        f"{ctx.author} tried to stream {channel} to document "
+                        f"{document.content['documentId']} even though it is already being streamed there.",
+                        exc_info=error
+                    )
+                    message = f"You already are streaming {channel.mention} to {document.content['title.']}!"
+                else:
+                    logger.info(
+                        f"{ctx.author} successfully started streaming {channel} to document {document.content['documentId']}"
+                    )
+                    message = f"{channel.mention} will now be streamed to **{document.content['title']}**."
 
-                async with AsyncSession(engine) as sess, sess.begin():
-                    message: discord.Message = await channel.fetch_message(channel.last_message_id)
-                    sess.add(Document(
-                        doc_id=document.content['documentId'],
-                        channel_id=channel.id,
-                        last_message=message.id,
-                        last_message_date=message.created_at,
-                        discord_id=ctx.author.id
-                    ))
-
-            await ctx.send(f"{channel.mention} will now be streamed to **{document.content['title']}**.")
+            await ctx.send(message)
 
     async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI, sess: AsyncSession):
         channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
