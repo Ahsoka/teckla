@@ -322,7 +322,7 @@ class CommandsCog(Cog):
                         f"{document.content['documentId']} even though it is already being streamed there.",
                         exc_info=error
                     )
-                    message = f"You already are streaming {channel.mention} to {document.content['title.']}!"
+                    message = f"You already are streaming {channel.mention} to {document.content['title']}!"
                 else:
                     logger.info(
                         f"{ctx.author} successfully started streaming {channel} to document {document.content['documentId']}"
