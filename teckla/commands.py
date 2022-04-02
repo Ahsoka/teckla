@@ -53,20 +53,27 @@ class CommandsCog(Cog):
     async def is_authenticated(self, ctx: SlashContext):
         async with AsyncSession(engine) as sess:
             token: Token = await sess.get(Token, ctx.author.id)
-        if token and token.expiry < datetime.today():
-            await ctx.send(
-                'Your token is no longer valid, please use `/authenticate register` to refresh your token.'
-            )
-        elif token:
-            return token
-        else:
-            await ctx.send(
-                (
-                    "Before you can use this command you must first use the "
-                    "`/authenticate register` command to register your Google account."
+            if token and token.is_expired():
+                error = await token.refresh(aio_google)
+                await sess.commit()
+                await sess.refresh(token)
+                if isinstance(error, Exception):
+                    logger.warning(f"Failed to refresh {ctx.author}'s token.", exc_info=error)
+                    await ctx.send(
+                        'Your token is no longer valid, please use `/authenticate register` to refresh your token.'
+                    )
+                else:
+                    return token
+            elif token:
+                return token
+            else:
+                await ctx.send(
+                    (
+                        "Before you can use this command you must first use the "
+                        "`/authenticate register` command to register your Google account."
+                    )
                 )
-            )
-        return False
+            return False
 
     @cog_ext.cog_subcommand(
         base='authenticate',
