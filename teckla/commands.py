@@ -345,7 +345,12 @@ class CommandsCog(Cog):
             channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
             try:
                 message = await channel.fetch_message(doc.last_message)
-            except (discord.NotFound, discord.HTTPException):
+            except discord.HTTPException as error:
+                logger.warning(
+                    f"Failed to find message with ID: {doc.last_message}, "
+                    f"using message date: {doc.last_message_date} as a backup.",
+                    exc_info=error
+                )
                 message = None
             after = message if message else doc.last_message_date
 
@@ -372,7 +377,6 @@ class CommandsCog(Cog):
                     doc.last_message_date = messages[-1].created_at
                 except aiogoogle.excs.HTTPError as error:
                     logger.warning(f"Failed to update {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
-                    discord_id = doc.token.id
                     if error.res.status_code == 404:
                         user_message = (
                             f"The document used for streaming <#{doc.channel_id}> has been deleted. "
@@ -401,12 +405,15 @@ class CommandsCog(Cog):
 
         if user_message:
             try:
-                user = await self.bot.fetch_user(discord_id)
-            except discord.HTTPException:
-                user = None
-            if user:
+                user = await self.bot.fetch_user(doc.token.id)
                 await user.send(user_message)
                 logger.info(log_message.format(user=user))
+            except discord.HTTPException as error:
+                logger.warning(
+                    f"Failed to message {doc.token.id} about the following:\n{user_message!r}",
+                    exc_info=error
+                )
+
 
     timer = loop(seconds=10) if config.testing else loop(minutes=2)
     @timer
