@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 import datetime
+import aiogoogle
 
 mapper = registry()
 
@@ -60,6 +61,18 @@ class Token:
             'sa': relationship('Document', lazy='selectin', cascade='all, delete-orphan', back_populates='token')
         }
     )
+
+    async def refresh(self, aio_google: aiogoogle.Aiogoogle):
+        try:
+            user_creds = await aio_google.oauth2.refresh(self.user_creds())
+            self.token = user_creds.access_token
+            self.expiry = datetime.datetime.fromisoformat(user_creds.expires_at)
+            if user_creds.refresh_token:
+                self.refresh_token = user_creds.refresh_token
+            return user_creds
+        except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
+            self.valid = False
+            return error
 
     def user_creds(self):
         return UserCreds(
