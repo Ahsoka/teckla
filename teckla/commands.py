@@ -338,76 +338,75 @@ class CommandsCog(Cog):
 
             await ctx.send(message)
 
-    async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI, sess: AsyncSession):
-        channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
-        try:
-            message = await channel.fetch_message(doc.last_message)
-        except (discord.NotFound, discord.HTTPException):
-            message = None
-        after = message if message else doc.last_message_date
-
-        messages = await channel.history(limit=None, after=after).flatten()
-
-        await sess.refresh(doc)
-        if messages:
+    async def update(self, doc: Document, google: Aiogoogle, docs_v1: GoogleAPI):
+        async with AsyncSession(engine) as sess, sess.begin():
+            user_message = None
+            doc = await sess.merge(doc)
+            channel: discord.TextChannel = self.bot.get_channel(doc.channel_id)
             try:
-                document = await google.as_user(
-                    docs_v1.documents.get(documentId=doc.doc_id),
-                    full_res=True
-                )
-                current = 1
-                if body := document.content.get('body'):
-                    if content := body.get('content'):
-                        if content and 'paragraph' in content[-1]:
-                            current = content[-1]['endIndex'] - 1
-                updates = self.messages_to_doc_json(messages, current_loc=current)
-                await google.as_user(docs_v1.documents.batchUpdate(
-                    documentId=doc.doc_id,
-                    json={'requests': updates}
-                ))
-                logger.debug(f"Successfully updated {doc.doc_id} with {len(messages)} message(s).")
-                doc.last_message = messages[-1].id
-                doc.last_message_date = messages[-1].created_at
-            except aiogoogle.excs.HTTPError as error:
-                logger.warning(f"Failed to update {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
-                discord_id = doc.token.id
-                user_message = None
-                if error.res.status_code == 404:
-                    user_message = (
-                        f"The document used for streaming <#{doc.channel_id}> has been deleted. "
-                        f"Streaming for <#{doc.channel_id}> will now stop, use /stream to restart with a new document."
-                    )
-                    log_message = (
-                        'Detected deleted document, document has been deleted from database and '
-                        '{user} has been notified about the missing document.'
-                    )
-                    await sess.delete(doc)
-                elif error.res.status_code in (400, 401, 403, 405, 406):
-                    doc.token.valid = False
-                    user_message = (
-                        'Your authentication token is no longer valid, '
-                        'please refresh it with the `/authenticate register` command.'
-                    )
-                    log_message = "Successfully notified {user} about a potentially invalid token."
-                else:
-                    logger.error(
-                        'Unknown reason prevented the bot from updating the Google Doc '
-                        f'{doc.doc_id}, Status code: {error.res.status_code}',
-                        exc_info=error
-                    )
+                message = await channel.fetch_message(doc.last_message)
+            except (discord.NotFound, discord.HTTPException):
+                message = None
+            after = message if message else doc.last_message_date
 
-                if user_message:
-                    try:
-                        user = await self.bot.fetch_user(discord_id)
-                    except discord.HTTPException:
-                        user = None
-                    if user:
-                        await user.send(user_message)
-                        logger.info(log_message.format(user=user))
+            messages = await channel.history(limit=None, after=after).flatten()
 
-            await sess.commit()
-        else:
-            logger.debug(f"No updates detected for {doc.doc_id}.")
+            if messages:
+                try:
+                    document = await google.as_user(
+                        docs_v1.documents.get(documentId=doc.doc_id),
+                        full_res=True
+                    )
+                    current = 1
+                    if body := document.content.get('body'):
+                        if content := body.get('content'):
+                            if content and 'paragraph' in content[-1]:
+                                current = content[-1]['endIndex'] - 1
+                    updates = self.messages_to_doc_json(messages, current_loc=current)
+                    await google.as_user(docs_v1.documents.batchUpdate(
+                        documentId=doc.doc_id,
+                        json={'requests': updates}
+                    ))
+                    logger.debug(f"Successfully updated {doc.doc_id} with {len(messages)} message(s).")
+                    doc.last_message = messages[-1].id
+                    doc.last_message_date = messages[-1].created_at
+                except aiogoogle.excs.HTTPError as error:
+                    logger.warning(f"Failed to update {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
+                    discord_id = doc.token.id
+                    if error.res.status_code == 404:
+                        user_message = (
+                            f"The document used for streaming <#{doc.channel_id}> has been deleted. "
+                            f"Streaming for <#{doc.channel_id}> will now stop, use /stream to restart with a new document."
+                        )
+                        log_message = (
+                            'Detected deleted document, document has been deleted from database and '
+                            '{user} has been notified about the missing document.'
+                        )
+                        await sess.delete(doc)
+                    elif error.res.status_code in (400, 401, 403, 405, 406):
+                        doc.token.valid = False
+                        user_message = (
+                            'Your authentication token is no longer valid, '
+                            'please refresh it with the `/authenticate register` command.'
+                        )
+                        log_message = "Successfully notified {user} about a potentially invalid token."
+                    else:
+                        logger.error(
+                            'Unknown reason prevented the bot from updating the Google Doc '
+                            f'{doc.doc_id}, Status code: {error.res.status_code}',
+                            exc_info=error
+                        )
+            else:
+                logger.debug(f"No updates detected for {doc.doc_id}.")
+
+        if user_message:
+            try:
+                user = await self.bot.fetch_user(discord_id)
+            except discord.HTTPException:
+                user = None
+            if user:
+                await user.send(user_message)
+                logger.info(log_message.format(user=user))
 
     timer = loop(seconds=10) if config.testing else loop(minutes=2)
     @timer
@@ -446,7 +445,7 @@ class CommandsCog(Cog):
                     for doc in token.documents:
                         channel = self.bot.get_channel(doc.channel_id)
                         if channel.permissions_for(channel.guild.me).read_message_history:
-                            coroutines.append(self.update(doc, googles[-1], docs_v1, sess))
+                            coroutines.append(self.update(doc, googles[-1], docs_v1))
                             doc.readable = True
                         elif doc.readable:
                             logger.warning(f"Detected channel {channel} ({channel.id}) that the bot can no longer read.")
