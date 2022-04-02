@@ -1,7 +1,7 @@
 aiohttp
 aiogoogle
 aiosqlite
-discord.py
+discord.py==1.7.3
 discord-py-slash-command==3.0.1
 python-dateutil
 sqlalchemy>=1.4.3
