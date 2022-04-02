@@ -395,7 +395,6 @@ class CommandsCog(Cog):
                         f'{doc.doc_id}, Status code: {error.res.status_code}',
                         exc_info=error
                     )
-                await sess.commit()
 
                 if user_message:
                     try:
@@ -405,6 +404,8 @@ class CommandsCog(Cog):
                     if user:
                         await user.send(user_message)
                         logger.info(log_message.format(user=user))
+
+            await sess.commit()
         else:
             logger.debug(f"No updates detected for {doc.doc_id}.")
 
@@ -467,8 +468,6 @@ class CommandsCog(Cog):
                 for google in googles:
                     await stack.enter_async_context(google)
                 await asyncio.gather(*coroutines)
-
-            await sess.commit()
 
     @stream_loop.error
     async def handle_stream_loop_error(self, error: Exception):
