@@ -21,8 +21,10 @@ config = parser.parse_args()
 engine = create_async_engine(f"sqlite+aiosqlite:///{'test.db' if config.testing else 'bot.db'}")
 
 bot = Bot(command_prefix='/', intents=discord.Intents(messages=True, guilds=True))
-# slash = SlashCommand(bot, sync_commands=True)
-slash = SlashCommand(bot)
+if config.testing:
+    slash = SlashCommand(bot, debug_guild=810742455745773579, sync_commands=True)
+else:
+    slash = SlashCommand(bot)
 
 with open('credentials.json') as file:
     client_creds = json.load(file)['web']
