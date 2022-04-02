@@ -1,6 +1,6 @@
-from . import bot, engine, client_creds
+from .logs import setUpLogger, setUpHandler, console, logs_dir
+from . import bot, engine, client_creds, config
 from .server import start_server
-from .logs import setUpLogger
 from sqlalchemy import text
 from .tables import mapper
 
@@ -22,10 +22,19 @@ async def on_ready():
     logger.debug(f"{bot.user} is ready to roll.")
 
 def main():
-    logs_dir = pathlib.Path('logs')
-    logs_dir.mkdir(exist_ok=True)
+    import logging
+
+    handlers = [console]
+    if not config.testing:
+        everything = setUpHandler(logging.FileHandler(logs_dir / 'clovis.log'))
+        errors = setUpHandler(
+            logging.FileHandler(logs_dir / 'ERRORS.clovis.log'),
+            level=logging.ERROR
+        )
+        handlers += [everything, errors]
+
     for logger_name in ('teckla.server', 'teckla.commands', '__main__'):
-        setUpLogger(f"{logger_name}", logs_dir=logs_dir)
+        setUpLogger(f"{logger_name}", handlers=handlers)
 
     bot.loop.create_task(start_server())
     bot.run(client_creds['bot-token'])

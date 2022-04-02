@@ -1,9 +1,11 @@
-import logging, logging.handlers
-import datetime
+from typing import List, Union
+
 import pathlib
+import logging, logging.handlers
 
-# NOTE: Adapted from: https://github.com/Ahsoka/bdaybot/blob/master/bdaybot/logs.py
+# NOTE: Adapted from: https://github.com/Ahsoka/clovis/blob/main/clovis/logs.py
 
+logs_dir = pathlib.Path('logs')
 
 class PrettyFormatter(logging.Formatter):
     def __init__(self, *args, style='%', **kwargs):
@@ -37,46 +39,32 @@ class PrettyFormatter(logging.Formatter):
         return returning
 
 
-def file_renamer(filename: str):
-    split = filename.split('.')
-    return ".".join(split[:-3] + [split[-1], split[-2]])
-
-def setUpLogger(
-    name,
-    logs_dir: pathlib.Path,
-    fmt: str = '%(levelname)s | %(name)s: %(asctime)s - [%(funcName)s()] %(message)s',
-    datefmt: str = '%I:%M %p'
-):
-    # Init the logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-
-    # Init the PrettyFormatter
-    pretty = PrettyFormatter(fmt=fmt, datefmt=datefmt)
-
-    # Create a handler that records all activity
-    everything = logging.handlers.TimedRotatingFileHandler(
-        logs_dir / f'{format(datetime.datetime.today(), "%Y-%m-%d")}.log',
-        when='midnight',
-        encoding='UTF-8'
+def setUpHandler(
+    handler: logging.Handler,
+    level: int = logging.DEBUG,
+    formatter: logging.Formatter = PrettyFormatter(
+        fmt='%(levelname)s | %(name)s: %(asctime)s - [%(funcName)s()] %(message)s'
     )
-    # Do not use loggging.NOTSET, does not work for some reason
-    # use logging.DEBUG if you want the lowest level
-    everything.setLevel(logging.INFO)
-    everything.setFormatter(pretty)
+):
+    if level is not None:
+        handler.setLevel(level)
 
-    # Rename files so .log is the file extension
-    everything.namer = file_renamer
+    if formatter is not None:
+        handler.setFormatter(formatter)
 
-    # Add handlers to the logger
-    logger.addHandler(everything)
+    return handler
 
-    # Create a handler so we can see the output on the console
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    console.setFormatter(pretty)
+def setUpLogger(logger: Union[str, logging.Logger], handlers: List[logging.Handler], default_level=logging.DEBUG):
+    if isinstance(logger, str):
+        logger = logging.getLogger(logger)
 
-    # Add handler to the logger
-    logger.addHandler(console)
+    if default_level is not None:
+        logger.setLevel(default_level)
+
+    for handler in handlers:
+        logger.addHandler(handler)
 
     return logger
+
+console = logging.StreamHandler()
+setUpHandler(console)
