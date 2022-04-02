@@ -26,9 +26,9 @@ def main():
 
     handlers = [console]
     if not config.testing:
-        everything = setUpHandler(logging.FileHandler(logs_dir / 'clovis.log'))
+        everything = setUpHandler(logging.FileHandler(logs_dir / 'teckla.log'))
         errors = setUpHandler(
-            logging.FileHandler(logs_dir / 'ERRORS.clovis.log'),
+            logging.FileHandler(logs_dir / 'ERRORS.teckla.log'),
             level=logging.ERROR
         )
         handlers += [everything, errors]
