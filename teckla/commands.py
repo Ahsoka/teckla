@@ -417,33 +417,28 @@ class CommandsCog(Cog):
         async with AsyncSession(engine) as sess:
             for token in (await sess.execute(select(Token).where(Token.documents.any()))).scalars().all():
                 if token.valid:
-                    try:
-                        if token.is_expired():
-                            logger.warning(f'Detected an expired token for {token.id}.')
-                            user_creds = await aio_google.oauth2.refresh(token.user_creds())
-                            logger.info(f"Successfully refreshed {token.id}'s token.")
-                            token.token = user_creds.access_token
-                            token.expiry = datetime.fromisoformat(user_creds.expires_at)
-                            if user_creds.refresh_token:
-                                token.refresh_token = user_creds.refresh_token
-                        else:
-                            user_creds = token.user_creds()
-                    except (aiogoogle.excs.AuthError, aiogoogle.excs.HTTPError) as error:
-                        logger.warning(f"Detected invalid token for {token.id}", exc_info=error)
-                        token.valid = False
+                    if token.is_expired():
+                        logger.warning(f'Detected an expired token for {token.id}.')
+                        user_creds = await token.refresh(aio_google)
                         await sess.commit()
                         await sess.refresh(token)
-                        try:
-                            user = await self.bot.fetch_user(token.id)
-                        except (discord.NotFound, discord.HTTPException):
-                            user = None
-                        if user:
-                            await user.send(
-                                ('Your authentication token is no longer valid, '
-                                'please refresh it with the `/authenticate register` command.')
-                            )
-                            logger.info(f'Successfully notified {user} ({token.id}) about the invalid token.')
-                        continue
+                        if isinstance(user_creds, Exception):
+                            logger.warning(f"Detected invalid token for {token.id}", exc_info=user_creds)
+                            try:
+                                user = await self.bot.fetch_user(token.id)
+                            except (discord.NotFound, discord.HTTPException):
+                                user = None
+                            if user:
+                                await user.send(
+                                    ('Your authentication token is no longer valid, '
+                                    'please refresh it with the `/authenticate register` command.')
+                                )
+                                logger.info(f'Successfully notified {user} ({token.id}) about the invalid token.')
+                            continue
+                        else:
+                            logger.info(f"Successfully refreshed {token.id}'s token.")
+                    else:
+                        user_creds = token.user_creds()
 
                     googles.append(Aiogoogle(user_creds=user_creds, client_creds=client_creds))
                     docs_v1 = await googles[-1].discover('docs', 'v1')
