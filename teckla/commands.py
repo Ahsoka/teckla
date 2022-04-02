@@ -414,7 +414,6 @@ class CommandsCog(Cog):
                     exc_info=error
                 )
 
-
     timer = loop(seconds=10) if config.testing else loop(minutes=2)
     @timer
     async def stream_loop(self):
