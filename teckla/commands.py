@@ -371,6 +371,7 @@ class CommandsCog(Cog):
             except aiogoogle.excs.HTTPError as error:
                 logger.warning(f"Failed to update {doc.doc_id} with {len(messages)} message(s).", exc_info=error)
                 discord_id = doc.token.id
+                user_message = None
                 if error.res.status_code == 404:
                     user_message = (
                         f"The document used for streaming <#{doc.channel_id}> has been deleted. "
@@ -381,22 +382,29 @@ class CommandsCog(Cog):
                         '{user} has been notified about the missing document.'
                     )
                     await sess.delete(doc)
-                else:
+                elif error.res.status_code in (400, 401, 403, 405, 406):
                     doc.token.valid = False
                     user_message = (
                         'Your authentication token is no longer valid, '
                         'please refresh it with the `/authenticate register` command.'
                     )
                     log_message = "Successfully notified {user} about a potentially invalid token."
+                else:
+                    logger.error(
+                        'Unknown reason prevented the bot from updating the Google Doc '
+                        f'{doc.doc_id}, Status code: {error.res.status_code}',
+                        exc_info=error
+                    )
                 await sess.commit()
 
-                try:
-                    user = await self.bot.fetch_user(discord_id)
-                except discord.HTTPException:
-                    user = None
-                if user:
-                    await user.send(user_message)
-                    logger.info(log_message.format(user=user))
+                if user_message:
+                    try:
+                        user = await self.bot.fetch_user(discord_id)
+                    except discord.HTTPException:
+                        user = None
+                    if user:
+                        await user.send(user_message)
+                        logger.info(log_message.format(user=user))
         else:
             logger.debug(f"No updates detected for {doc.doc_id}.")
 
