@@ -6,7 +6,6 @@ from .tables import mapper
 
 import asyncio
 import logging
-import pathlib
 
 logger = logging.getLogger(__name__)
 
