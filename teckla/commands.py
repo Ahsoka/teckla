@@ -1,4 +1,4 @@
-from discord_slash.utils.manage_commands import create_option, create_permission
+from discord_slash.utils.manage_commands import create_permission
 from . import aio_google, client_creds, engine, config
 from sqlalchemy.ext.asyncio import AsyncSession
 from discord.ext.commands import Cog, Bot
@@ -8,6 +8,7 @@ from discord_slash import SlashContext
 from .tables import Token, Document
 from discord.ext.tasks import loop
 from discord_slash import cog_ext
+from .utils import create_option
 from aiogoogle import Aiogoogle
 from datetime import datetime
 from sqlalchemy import select
@@ -194,7 +195,7 @@ class CommandsCog(Cog):
             create_option(
                 'channel',
                 "Select the channel to upload messages from, if there is no input the current channel is selected.",
-                7,
+                discord.TextChannel,
                 required=False
             ),
             create_option(
@@ -251,7 +252,7 @@ class CommandsCog(Cog):
             create_option(
                 'channel',
                 "Select the channel to upload messages from, if there is no input the current channel is selected.",
-                7,
+                discord.TextChannel,
                 required=False
             ),
             create_option(
@@ -280,7 +281,7 @@ class CommandsCog(Cog):
             create_option(
                 'channel',
                 "Select the channel to upload messages from, if there is no input the current channel is selected.",
-                7,
+                discord.TextChannel,
                 required=False
             )
         ],
