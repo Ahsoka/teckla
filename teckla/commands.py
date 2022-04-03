@@ -502,7 +502,7 @@ class CommandsCog(Cog):
         async with AsyncSession(engine) as sess:
             docs = (await sess.execute(select(Document).where(Document.channel_id == channel.id))).scalars().all()
         if docs:
-            message = f"{channel.mention} is currently being streamed to the following Google Docs:\n"
+            message = f"{channel.mention} is currently being streamed to the following Google Doc(s):\n"
             for num, doc in enumerate(docs):
                 message += f"{num + 1}. https://docs.google.com/document/d/{doc.doc_id}\n"
             await ctx.send(message)
