@@ -482,6 +482,33 @@ class CommandsCog(Cog):
             f'The `stream_loop` crashed due to the following error: ```\n{repr(error)}```'
         )
 
+    @cog_ext.cog_subcommand(
+        base='get',
+        name='document',
+        description="Use this to figure out which documents the given channel is being streamed to.",
+        options=[
+            create_option(
+                'channel',
+                description="The channel to analyze, if there is no input the current channel is selected.",
+                option_type=discord.TextChannel,
+                required=False
+            )
+        ]
+    )
+    async def get_document(self, ctx: SlashContext, channel: discord.TextChannel = None):
+        if channel is None:
+            channel = ctx.channel
+
+        async with AsyncSession(engine) as sess:
+            docs = (await sess.execute(select(Document).where(Document.channel_id == channel.id))).scalars().all()
+        if docs:
+            message = f"{channel.mention} is currently being streamed to the following Google Docs:\n"
+            for num, doc in enumerate(docs):
+                message += f"{num + 1}. https://docs.google.com/document/d/{doc.doc_id}\n"
+            await ctx.send(message)
+        else:
+            await ctx.send(f"{channel.mention} is not currently being streamed to any Google Docs.")
+
     @cog_ext.cog_slash(
         name='source',
         description="Use this to get the link to the bot's source code!"
